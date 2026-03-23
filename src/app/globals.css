@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
 :root {
+  --gold: #D4AF37;
+  --gold-light: #E8D48B;
+  --gold-dark: #B8960F;
+  --red: #DC2626;
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -8,19 +12,162 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-gold-dark: var(--gold-dark);
+  --color-red: var(--red);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Noto Sans KR', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Lotto Ball Colors */
+.ball-yellow { background-color: #FFC107; }
+.ball-blue { background-color: #2196F3; }
+.ball-red { background-color: #F44336; }
+.ball-gray { background-color: #9E9E9E; }
+.ball-green { background-color: #4CAF50; }
+
+/* Generate Button Animation */
+.generate-btn {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.generate-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+}
+
+.generate-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+}
+
+.generate-btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.generate-btn:hover::after {
+  opacity: 1;
+}
+
+/* Pulse animation for the generate button */
+@keyframes pulse-gold {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(212, 175, 55, 0);
+  }
+}
+
+.pulse-gold {
+  animation: pulse-gold 2s infinite;
+}
+
+/* Tab styling */
+.tab-active {
+  border-bottom: 3px solid var(--gold);
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.tab-inactive {
+  border-bottom: 3px solid transparent;
+  color: #9CA3AF;
+}
+
+.tab-inactive:hover {
+  color: var(--gold);
+}
+
+/* Celebration animation */
+@keyframes celebrate {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.1) rotate(-5deg); }
+  50% { transform: scale(1.2) rotate(5deg); }
+  75% { transform: scale(1.1) rotate(-3deg); }
+  100% { transform: scale(1); }
+}
+
+.celebrate {
+  animation: celebrate 0.6s ease-in-out;
+}
+
+/* Number selector ball */
+.number-selector-ball {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: 2px solid #E5E7EB;
+  color: #374151;
+  background: white;
+}
+
+.number-selector-ball:hover {
+  border-color: var(--gold);
+}
+
+.number-selector-ball.selected {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: white;
+}
+
+/* Stats bar */
+.stat-bar {
+  transition: width 0.8s ease-out;
+}
+
+/* Confetti */
+@keyframes confetti-fall {
+  0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.confetti-piece {
+  position: fixed;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  animation: confetti-fall 3s ease-out forwards;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gold-light);
+  border-radius: 2px;
 }
