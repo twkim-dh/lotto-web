@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import NumberSet from '@/components/NumberSet';
 import LottoBall from '@/components/LottoBall';
@@ -9,9 +9,12 @@ import {
   generateWithFixed,
   generateExcluding,
   generateOddEven,
-  generateDream,
+  generateDreamWithSource,
+  dreamData,
 } from '@/lib/generator';
+import type { DreamEntry, DreamResult } from '@/lib/generator';
 import { initKakao, shareLotto } from '@/lib/kakao';
+import allDraws from '@/data/all-draws.json';
 
 type Mode = 'random' | 'dream' | 'fixed' | 'exclude' | 'oddeven';
 
@@ -29,55 +32,49 @@ const oddEvenOptions = [
   { label: '홀2:짝4', odd: 2 },
 ];
 
-interface DrawResult {
-  drwNo: number;
-  drwtNo1: number;
-  drwtNo2: number;
-  drwtNo3: number;
-  drwtNo4: number;
-  drwtNo5: number;
-  drwtNo6: number;
-  bnusNo: number;
-  drwNoDate: string;
+const popularKeywords = ['돼지', '돈', '용', '뱀', '집', '물', '불', '결혼', '아기', '별', '산', '금'];
+
+interface DrawData {
+  round: number;
+  date: string;
+  numbers: number[];
+  bonus: number;
+  prize1: string;
 }
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>('random');
   const [setCount, setSetCount] = useState(1);
   const [results, setResults] = useState<number[][]>([]);
+  const [dreamResults, setDreamResults] = useState<DreamResult[]>([]);
   const [isGenerated, setIsGenerated] = useState(false);
   const [animationKey, setAnimationKey] = useState(0);
 
   // Mode-specific states
-  const [dreamKeyword, setDreamKeyword] = useState('');
+  const [dreamSearch, setDreamSearch] = useState('');
+  const [selectedDream, setSelectedDream] = useState<DreamEntry | null>(null);
   const [fixedNumbers, setFixedNumbers] = useState<number[]>([]);
   const [excludedNumbers, setExcludedNumbers] = useState<number[]>([]);
   const [oddCount, setOddCount] = useState(3);
 
-  // Latest draw
-  const [latestDraw, setLatestDraw] = useState<DrawResult | null>(null);
-
   // Share feedback
   const [shareMsg, setShareMsg] = useState('');
 
-  useEffect(() => {
-    initKakao();
-    fetchLatestDraw();
+  // Latest draw from static data
+  const latestDraw = useMemo(() => {
+    const draws = allDraws as DrawData[];
+    return draws[draws.length - 1];
   }, []);
 
-  const fetchLatestDraw = async () => {
-    try {
-      const res = await fetch('/api/draw');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.returnValue === 'success') {
-          setLatestDraw(data);
-        }
-      }
-    } catch {
-      // silently fail
-    }
-  };
+  // Filtered dream data based on search
+  const filteredDreams = useMemo(() => {
+    if (!dreamSearch.trim()) return [];
+    return dreamData.filter((d) => d.keyword.includes(dreamSearch.trim()));
+  }, [dreamSearch]);
+
+  useEffect(() => {
+    initKakao();
+  }, []);
 
   const handleGenerate = useCallback(() => {
     let generated: number[][] = [];
@@ -85,20 +82,25 @@ export default function Home() {
     switch (mode) {
       case 'random':
         generated = generateRandom(setCount);
+        setDreamResults([]);
         break;
-      case 'dream':
-        if (!dreamKeyword.trim()) {
-          alert('꿈 키워드를 입력해주세요!');
+      case 'dream': {
+        if (!selectedDream) {
+          alert('꿈 키워드를 선택해주세요!');
           return;
         }
-        generated = generateDream(dreamKeyword, setCount);
+        const dResults = generateDreamWithSource(selectedDream.keyword, setCount);
+        setDreamResults(dResults);
+        generated = dResults.map((r) => r.numbers);
         break;
+      }
       case 'fixed':
         if (fixedNumbers.length === 0) {
           alert('고정할 번호를 선택해주세요!');
           return;
         }
         generated = generateWithFixed(fixedNumbers, setCount);
+        setDreamResults([]);
         break;
       case 'exclude':
         if (excludedNumbers.length === 0) {
@@ -110,16 +112,18 @@ export default function Home() {
           return;
         }
         generated = generateExcluding(excludedNumbers, setCount);
+        setDreamResults([]);
         break;
       case 'oddeven':
         generated = generateOddEven(oddCount, setCount);
+        setDreamResults([]);
         break;
     }
 
     setResults(generated);
     setIsGenerated(true);
     setAnimationKey((k) => k + 1);
-  }, [mode, setCount, dreamKeyword, fixedNumbers, excludedNumbers, oddCount]);
+  }, [mode, setCount, selectedDream, fixedNumbers, excludedNumbers, oddCount]);
 
   const handleShare = async () => {
     const success = await shareLotto(results);
@@ -130,7 +134,6 @@ export default function Home() {
   };
 
   const handleSaveImage = () => {
-    // Create a canvas-based image of the numbers
     const canvas = document.createElement('canvas');
     canvas.width = 400;
     canvas.height = 80 + results.length * 60;
@@ -233,6 +236,13 @@ export default function Home() {
     </div>
   );
 
+  const handleSelectDream = (entry: DreamEntry) => {
+    setSelectedDream(entry);
+    setDreamSearch('');
+    setIsGenerated(false);
+    setDreamResults([]);
+  };
+
   return (
     <div className="px-4 pt-6">
       {/* Logo */}
@@ -262,19 +272,77 @@ export default function Home() {
       <div className="mb-4">
         {mode === 'dream' && (
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">
-              꿈 키워드 입력
+            <label className="text-sm font-medium text-gray-700 block mb-2">
+              꿈 키워드 검색
             </label>
             <input
               type="text"
-              value={dreamKeyword}
-              onChange={(e) => setDreamKeyword(e.target.value)}
-              placeholder="예: 돼지, 물, 뱀, 꽃..."
+              value={dreamSearch}
+              onChange={(e) => setDreamSearch(e.target.value)}
+              placeholder="꿈에서 본 것을 검색하세요..."
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gold"
             />
-            <p className="text-xs text-gray-400 mt-1">
-              꿈에서 본 키워드를 입력하면 관련 번호를 생성합니다
-            </p>
+
+            {/* Search results */}
+            {dreamSearch.trim() && filteredDreams.length > 0 && (
+              <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
+                {filteredDreams.map((entry) => (
+                  <button
+                    key={entry.keyword}
+                    className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 flex items-center gap-2"
+                    onClick={() => handleSelectDream(entry)}
+                  >
+                    <span className="text-lg">{entry.emoji}</span>
+                    <span className="text-sm font-medium">{entry.keyword}</span>
+                    <span className="text-xs text-gray-400 ml-auto">{entry.meaning}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {dreamSearch.trim() && filteredDreams.length === 0 && (
+              <p className="text-xs text-gray-400 mt-2">일치하는 키워드가 없습니다. 아래 인기 키워드를 선택해보세요.</p>
+            )}
+
+            {/* Popular keyword buttons */}
+            <div className="mt-3">
+              <p className="text-xs text-gray-500 mb-2">인기 키워드</p>
+              <div className="flex flex-wrap gap-2">
+                {popularKeywords.map((kw) => {
+                  const entry = dreamData.find((d) => d.keyword === kw);
+                  if (!entry) return null;
+                  return (
+                    <button
+                      key={kw}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        selectedDream?.keyword === kw
+                          ? 'bg-gold text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                      onClick={() => handleSelectDream(entry)}
+                    >
+                      {entry.emoji} {kw}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Selected dream info */}
+            {selectedDream && (
+              <div className="mt-4 bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-2xl">{selectedDream.emoji}</span>
+                  <span className="text-lg font-bold">{selectedDream.keyword}</span>
+                </div>
+                <p className="text-sm text-gray-500 mb-2">{selectedDream.meaning}</p>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-400">관련 번호:</span>
+                  {selectedDream.numbers.map((num) => (
+                    <LottoBall key={num} number={num} size="sm" />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -327,31 +395,33 @@ export default function Home() {
       </div>
 
       {/* Set Count */}
-      <div className="flex items-center gap-3 mb-4">
-        <span className="text-sm font-medium text-gray-700">세트 수:</span>
-        <div className="flex gap-1.5">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              className={`w-9 h-9 rounded-full text-sm font-bold transition-all ${
-                setCount === n
-                  ? 'bg-gold text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-              onClick={() => setSetCount(n)}
-            >
-              {n}
-            </button>
-          ))}
+      {mode !== 'dream' && (
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-sm font-medium text-gray-700">세트 수:</span>
+          <div className="flex gap-1.5">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                className={`w-9 h-9 rounded-full text-sm font-bold transition-all ${
+                  setCount === n
+                    ? 'bg-gold text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+                onClick={() => setSetCount(n)}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Generate Button */}
       <button
         onClick={handleGenerate}
         className="generate-btn pulse-gold w-full py-4 rounded-2xl text-lg font-black tracking-wider"
       >
-        번호 생성!
+        {mode === 'dream' && selectedDream ? '이 꿈으로 번호 뽑기' : '번호 생성!'}
       </button>
 
       {/* Results */}
@@ -369,13 +439,35 @@ export default function Home() {
                 생성된 번호
               </h3>
               {results.map((set, i) => (
-                <NumberSet
-                  key={`${animationKey}-${i}`}
-                  label={String.fromCharCode(65 + i)}
-                  numbers={set}
-                  animated={true}
-                />
+                <div key={`${animationKey}-${i}`}>
+                  {mode === 'dream' && dreamResults[i] ? (
+                    <div className="number-set flex items-center gap-2 py-2">
+                      <span className="text-sm font-bold text-gold w-6 shrink-0">
+                        {String.fromCharCode(65 + i)}
+                      </span>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {set.map((num, j) => (
+                          <div key={`${num}-${j}`} className="relative">
+                            <LottoBall number={num} size="md" animated delay={j} />
+                            {dreamResults[i].dreamNumbers.includes(num) && (
+                              <span className="absolute -top-1 -right-1 text-gold text-xs font-bold">★</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <NumberSet
+                      label={String.fromCharCode(65 + i)}
+                      numbers={set}
+                      animated={true}
+                    />
+                  )}
+                </div>
               ))}
+              {mode === 'dream' && dreamResults.length > 0 && (
+                <p className="text-xs text-gray-400 mt-2">★ = 꿈 해몽 번호 / 나머지 = 랜덤</p>
+              )}
             </div>
 
             {/* Action Buttons */}
@@ -412,23 +504,16 @@ export default function Home() {
         <div className="mt-6 bg-gray-50 rounded-2xl p-4">
           <h3 className="text-sm font-bold text-gray-700 mb-2">
             최근 당첨번호{' '}
-            <span className="text-gold">({latestDraw.drwNo}회)</span>
+            <span className="text-gold">({latestDraw.round}회)</span>
           </h3>
           <div className="flex items-center gap-1.5 flex-wrap">
-            {[
-              latestDraw.drwtNo1,
-              latestDraw.drwtNo2,
-              latestDraw.drwtNo3,
-              latestDraw.drwtNo4,
-              latestDraw.drwtNo5,
-              latestDraw.drwtNo6,
-            ].map((num, i) => (
+            {latestDraw.numbers.map((num: number, i: number) => (
               <LottoBall key={i} number={num} size="sm" />
             ))}
-            <LottoBall number={latestDraw.bnusNo} size="sm" bonus />
+            <LottoBall number={latestDraw.bonus} size="sm" bonus />
           </div>
           <p className="text-xs text-gray-400 mt-2">
-            {latestDraw.drwNoDate} 추첨
+            {latestDraw.date} 추첨
           </p>
         </div>
       )}

@@ -1,84 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import LottoBall from '@/components/LottoBall';
 import { motion } from 'framer-motion';
+import allDraws from '@/data/all-draws.json';
 
-interface DrawResult {
-  returnValue: string;
-  drwNo: number;
-  drwNoDate: string;
-  drwtNo1: number;
-  drwtNo2: number;
-  drwtNo3: number;
-  drwtNo4: number;
-  drwtNo5: number;
-  drwtNo6: number;
-  bnusNo: number;
-  firstWinamnt: number;
-  firstPrzwnerCo: number;
-  firstAccumamnt: number;
-  totSellamnt: number;
+interface DrawData {
+  round: number;
+  date: string;
+  numbers: number[];
+  bonus: number;
+  prize1: string;
 }
 
-function formatMoney(amount: number): string {
-  if (amount >= 100000000) {
-    const eok = Math.floor(amount / 100000000);
-    const remain = Math.floor((amount % 100000000) / 10000);
-    return remain > 0 ? `${eok}억 ${remain.toLocaleString()}만원` : `${eok}억원`;
-  }
-  if (amount >= 10000) {
-    return `${Math.floor(amount / 10000).toLocaleString()}만원`;
-  }
-  return `${amount.toLocaleString()}원`;
-}
+const draws = allDraws as DrawData[];
 
 export default function DrawPage() {
-  const [draw, setDraw] = useState<DrawResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [roundInput, setRoundInput] = useState('');
+  const latestRound = draws[draws.length - 1].round;
+  const [roundInput, setRoundInput] = useState(String(latestRound));
+  const [viewRound, setViewRound] = useState(latestRound);
   const [error, setError] = useState('');
 
-  const fetchDraw = async (round?: number) => {
-    setLoading(true);
-    setError('');
-    try {
-      const url = round ? `/api/draw?round=${round}` : '/api/draw';
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.returnValue === 'success') {
-        setDraw(data);
-        setRoundInput(String(data.drwNo));
-      } else {
-        setError('해당 회차 정보를 찾을 수 없습니다.');
-        setDraw(null);
-      }
-    } catch {
-      setError('데이터를 불러오는데 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDraw();
-  }, []);
+  const draw = useMemo(() => {
+    return draws.find((d) => d.round === viewRound) || null;
+  }, [viewRound]);
 
   const handleSearch = () => {
     const round = parseInt(roundInput, 10);
-    if (round > 0) {
-      fetchDraw(round);
+    if (round > 0 && round <= latestRound) {
+      setViewRound(round);
+      setError('');
+    } else {
+      setError('해당 회차 정보를 찾을 수 없습니다.');
     }
   };
-
-  const getNumbers = (d: DrawResult) => [
-    d.drwtNo1,
-    d.drwtNo2,
-    d.drwtNo3,
-    d.drwtNo4,
-    d.drwtNo5,
-    d.drwtNo6,
-  ];
 
   return (
     <div className="px-4 pt-6">
@@ -105,33 +60,27 @@ export default function DrawPage() {
       </div>
 
       {/* Quick Links */}
-      {draw && (
-        <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar">
-          {Array.from({ length: 5 }, (_, i) => draw.drwNo - i).map(
-            (round) => (
-              <button
-                key={round}
-                onClick={() => fetchDraw(round)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                  draw.drwNo === round
-                    ? 'bg-gold text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {round}회
-              </button>
-            )
-          )}
-        </div>
-      )}
-
-      {/* Loading */}
-      {loading && (
-        <div className="text-center py-12 text-gray-400">
-          <div className="animate-spin w-8 h-8 border-2 border-gold border-t-transparent rounded-full mx-auto mb-2" />
-          불러오는 중...
-        </div>
-      )}
+      <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar">
+        {Array.from({ length: 5 }, (_, i) => latestRound - i).map(
+          (round) => (
+            <button
+              key={round}
+              onClick={() => {
+                setViewRound(round);
+                setRoundInput(String(round));
+                setError('');
+              }}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                viewRound === round
+                  ? 'bg-gold text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {round}회
+            </button>
+          )
+        )}
+      </div>
 
       {/* Error */}
       {error && (
@@ -139,28 +88,29 @@ export default function DrawPage() {
       )}
 
       {/* Draw Result */}
-      {draw && !loading && (
+      {draw && (
         <motion.div
+          key={draw.round}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-gray-50 rounded-2xl p-5"
         >
           <div className="text-center mb-4">
             <span className="text-gold font-black text-lg">
-              제 {draw.drwNo}회
+              제 {draw.round}회
             </span>
             <p className="text-xs text-gray-400 mt-1">
-              {draw.drwNoDate} 추첨
+              {draw.date} 추첨
             </p>
           </div>
 
           {/* Numbers */}
           <div className="flex items-center justify-center gap-1.5 flex-wrap mb-6">
-            {getNumbers(draw).map((num, i) => (
+            {draw.numbers.map((num, i) => (
               <LottoBall key={i} number={num} size="lg" animated delay={i} />
             ))}
             <LottoBall
-              number={draw.bnusNo}
+              number={draw.bonus}
               size="lg"
               bonus
               animated
@@ -174,24 +124,42 @@ export default function DrawPage() {
               <div>
                 <span className="text-xs text-gray-400">1등 당첨금</span>
                 <p className="text-sm font-bold text-gold">
-                  {formatMoney(draw.firstWinamnt)}
-                </p>
-              </div>
-              <span className="text-xs text-gray-400">
-                {draw.firstPrzwnerCo}명
-              </span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-white rounded-xl">
-              <div>
-                <span className="text-xs text-gray-400">총 판매금액</span>
-                <p className="text-sm font-bold text-gray-700">
-                  {formatMoney(draw.totSellamnt)}
+                  {draw.prize1}
                 </p>
               </div>
             </div>
           </div>
         </motion.div>
       )}
+
+      {/* Recent draws list */}
+      <div className="mt-6">
+        <h3 className="text-sm font-bold text-gray-700 mb-3">최근 회차</h3>
+        <div className="space-y-2">
+          {draws.slice(-20).reverse().map((d) => (
+            <button
+              key={d.round}
+              onClick={() => {
+                setViewRound(d.round);
+                setRoundInput(String(d.round));
+                setError('');
+              }}
+              className={`w-full text-left flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                viewRound === d.round ? 'bg-gold/10' : 'bg-gray-50 hover:bg-gray-100'
+              }`}
+            >
+              <span className="text-sm font-bold text-gold w-16">{d.round}회</span>
+              <div className="flex gap-1 flex-1 flex-wrap">
+                {d.numbers.map((num, i) => (
+                  <LottoBall key={i} number={num} size="sm" />
+                ))}
+                <LottoBall number={d.bonus} size="sm" bonus />
+              </div>
+              <span className="text-xs text-gray-400 shrink-0">{d.date}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="h-8" />
     </div>

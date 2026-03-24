@@ -1,18 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import LottoBall from '@/components/LottoBall';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import allDraws from '@/data/all-draws.json';
 
-interface DrawResult {
-  drwNo: number;
-  drwtNo1: number;
-  drwtNo2: number;
-  drwtNo3: number;
-  drwtNo4: number;
-  drwtNo5: number;
-  drwtNo6: number;
-  bnusNo: number;
+interface DrawData {
+  round: number;
+  date: string;
+  numbers: number[];
+  bonus: number;
+  prize1: string;
 }
 
 interface CheckResult {
@@ -22,25 +20,20 @@ interface CheckResult {
   rankLabel: string;
 }
 
+const draws = allDraws as DrawData[];
+
 export default function CheckPage() {
+  const latestRound = draws[draws.length - 1].round;
   const [myNumbers, setMyNumbers] = useState<number[]>([]);
-  const [roundInput, setRoundInput] = useState('');
-  const [draw, setDraw] = useState<DrawResult | null>(null);
+  const [roundInput, setRoundInput] = useState(String(latestRound));
   const [result, setResult] = useState<CheckResult | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [checkedRound, setCheckedRound] = useState<number | null>(null);
 
-  useEffect(() => {
-    // Fetch latest draw to get default round
-    fetch('/api/draw')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.returnValue === 'success') {
-          setDraw(data);
-          setRoundInput(String(data.drwNo));
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const checkedDraw = useMemo(() => {
+    if (checkedRound === null) return null;
+    return draws.find((d) => d.round === checkedRound) || null;
+  }, [checkedRound]);
 
   const toggleNumber = (num: number) => {
     if (myNumbers.includes(num)) {
@@ -50,46 +43,23 @@ export default function CheckPage() {
     }
   };
 
-  const handleCheck = async () => {
+  const handleCheck = () => {
     if (myNumbers.length !== 6) {
       alert('6개의 번호를 선택해주세요!');
       return;
     }
 
-    // Fetch the draw if round changed
     const round = parseInt(roundInput, 10);
-    let currentDraw = draw;
+    const draw = draws.find((d) => d.round === round);
 
-    if (!draw || draw.drwNo !== round) {
-      try {
-        const res = await fetch(`/api/draw?round=${round}`);
-        const data = await res.json();
-        if (data.returnValue === 'success') {
-          currentDraw = data;
-          setDraw(data);
-        } else {
-          alert('해당 회차 정보를 찾을 수 없습니다.');
-          return;
-        }
-      } catch {
-        alert('데이터를 불러오는데 실패했습니다.');
-        return;
-      }
+    if (!draw) {
+      alert('해당 회차 정보를 찾을 수 없습니다.');
+      return;
     }
 
-    if (!currentDraw) return;
-
-    const winNumbers = [
-      currentDraw.drwtNo1,
-      currentDraw.drwtNo2,
-      currentDraw.drwtNo3,
-      currentDraw.drwtNo4,
-      currentDraw.drwtNo5,
-      currentDraw.drwtNo6,
-    ];
-
+    const winNumbers = draw.numbers;
     const matched = myNumbers.filter((n) => winNumbers.includes(n));
-    const matchedBonus = myNumbers.includes(currentDraw.bnusNo);
+    const matchedBonus = myNumbers.includes(draw.bonus);
 
     let rank: number | null = null;
     let rankLabel = '낙첨';
@@ -112,6 +82,7 @@ export default function CheckPage() {
     }
 
     setResult({ matchedNumbers: matched, matchedBonus, rank, rankLabel });
+    setCheckedRound(round);
 
     if (matched.length >= 3) {
       setShowConfetti(true);
@@ -151,6 +122,7 @@ export default function CheckPage() {
           onChange={(e) => setRoundInput(e.target.value)}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gold"
         />
+        <p className="text-xs text-gray-400 mt-1">데이터: 1~{latestRound}회차</p>
       </div>
 
       {/* Number Selection */}
@@ -196,7 +168,7 @@ export default function CheckPage() {
 
       {/* Result */}
       <AnimatePresence>
-        {result && draw && (
+        {result && checkedDraw && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -206,17 +178,10 @@ export default function CheckPage() {
             {/* Draw Numbers */}
             <div className="text-center mb-4">
               <span className="text-sm text-gray-500">
-                제 {draw.drwNo}회 당첨번호
+                제 {checkedDraw.round}회 당첨번호
               </span>
               <div className="flex items-center justify-center gap-1.5 mt-2 flex-wrap">
-                {[
-                  draw.drwtNo1,
-                  draw.drwtNo2,
-                  draw.drwtNo3,
-                  draw.drwtNo4,
-                  draw.drwtNo5,
-                  draw.drwtNo6,
-                ].map((num, i) => (
+                {checkedDraw.numbers.map((num, i) => (
                   <div
                     key={i}
                     className={`${
@@ -235,7 +200,7 @@ export default function CheckPage() {
                       : ''
                   }`}
                 >
-                  <LottoBall number={draw.bnusNo} size="md" bonus />
+                  <LottoBall number={checkedDraw.bonus} size="md" bonus />
                 </div>
               </div>
             </div>
@@ -256,7 +221,7 @@ export default function CheckPage() {
                 {result.rankLabel}
               </p>
               {result.rank && result.rank <= 3 && (
-                <p className="text-sm text-gold mt-1">축하합니다! 🎉</p>
+                <p className="text-sm text-gold mt-1">축하합니다!</p>
               )}
               {!result.rank && (
                 <p className="text-xs text-gray-400 mt-1">

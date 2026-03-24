@@ -2,39 +2,28 @@
 
 import { useState, useMemo } from 'react';
 import LottoBall from '@/components/LottoBall';
+import allDraws from '@/data/all-draws.json';
 
-// Hardcoded last 20 draws for MVP (approximate recent data)
-const recentDraws = [
-  { round: 1160, numbers: [3, 13, 20, 28, 35, 44], bonus: 41 },
-  { round: 1159, numbers: [1, 6, 12, 18, 32, 39], bonus: 44 },
-  { round: 1158, numbers: [5, 11, 17, 25, 36, 42], bonus: 30 },
-  { round: 1157, numbers: [2, 14, 23, 31, 37, 43], bonus: 8 },
-  { round: 1156, numbers: [7, 10, 19, 26, 33, 40], bonus: 15 },
-  { round: 1155, numbers: [4, 9, 16, 22, 34, 45], bonus: 27 },
-  { round: 1154, numbers: [1, 8, 15, 24, 38, 41], bonus: 11 },
-  { round: 1153, numbers: [6, 13, 21, 29, 36, 43], bonus: 3 },
-  { round: 1152, numbers: [2, 10, 18, 27, 35, 44], bonus: 20 },
-  { round: 1151, numbers: [3, 7, 14, 23, 32, 40], bonus: 45 },
-  { round: 1150, numbers: [5, 12, 19, 28, 37, 42], bonus: 9 },
-  { round: 1149, numbers: [1, 9, 16, 25, 33, 41], bonus: 22 },
-  { round: 1148, numbers: [4, 11, 20, 30, 38, 45], bonus: 17 },
-  { round: 1147, numbers: [6, 8, 15, 22, 34, 43], bonus: 29 },
-  { round: 1146, numbers: [2, 13, 17, 26, 36, 39], bonus: 7 },
-  { round: 1145, numbers: [3, 10, 21, 31, 37, 44], bonus: 14 },
-  { round: 1144, numbers: [7, 12, 18, 24, 35, 40], bonus: 1 },
-  { round: 1143, numbers: [5, 9, 16, 27, 33, 42], bonus: 38 },
-  { round: 1142, numbers: [1, 14, 19, 23, 36, 41], bonus: 6 },
-  { round: 1141, numbers: [4, 8, 11, 25, 32, 45], bonus: 20 },
-];
+interface DrawData {
+  round: number;
+  date: string;
+  numbers: number[];
+  bonus: number;
+  prize1: string;
+}
+
+const draws = allDraws as DrawData[];
 
 export default function StatsPage() {
-  const [tab, setTab] = useState<'freq' | 'hot' | 'pairs'>('freq');
+  const [tab, setTab] = useState<'freq' | 'hot' | 'oddeven' | 'range'>('freq');
+
+  const totalDraws = draws.length;
 
   // Calculate frequency of all 45 numbers
   const frequency = useMemo(() => {
     const freq: Record<number, number> = {};
     for (let i = 1; i <= 45; i++) freq[i] = 0;
-    recentDraws.forEach((draw) => {
+    draws.forEach((draw) => {
       draw.numbers.forEach((n) => freq[n]++);
     });
     return freq;
@@ -45,66 +34,78 @@ export default function StatsPage() {
     [frequency]
   );
 
-  // Most frequent / least frequent
+  // Sorted by frequency
   const sortedByFreq = useMemo(() => {
     return Object.entries(frequency)
       .map(([num, count]) => ({ num: parseInt(num), count }))
       .sort((a, b) => b.count - a.count);
   }, [frequency]);
 
-  const mostFrequent = sortedByFreq.slice(0, 6);
-  const leastFrequent = sortedByFreq.slice(-6).reverse();
+  // Hot: top 10 most frequent
+  const hotNumbers = sortedByFreq.slice(0, 10);
+  // Cold: top 10 least frequent
+  const coldNumbers = [...sortedByFreq].reverse().slice(0, 10);
 
-  // Hot/cold numbers (recent 10 draws)
-  const { hot, cold } = useMemo(() => {
-    const recentFreq: Record<number, number> = {};
-    for (let i = 1; i <= 45; i++) recentFreq[i] = 0;
-    recentDraws.slice(0, 10).forEach((draw) => {
-      draw.numbers.forEach((n) => recentFreq[n]++);
+  // Odd/Even ratio across all draws
+  const oddEvenStats = useMemo(() => {
+    let totalOdd = 0;
+    let totalEven = 0;
+    draws.forEach((draw) => {
+      draw.numbers.forEach((n) => {
+        if (n % 2 === 1) totalOdd++;
+        else totalEven++;
+      });
     });
-    const sorted = Object.entries(recentFreq)
-      .map(([num, count]) => ({ num: parseInt(num), count }))
-      .sort((a, b) => b.count - a.count);
-    return {
-      hot: sorted.slice(0, 6),
-      cold: sorted.filter((n) => n.count === 0).slice(0, 10),
-    };
+    return { odd: totalOdd, even: totalEven };
   }, []);
 
-  // Consecutive pairs
-  const pairs = useMemo(() => {
-    const pairCount: Record<string, number> = {};
-    recentDraws.forEach((draw) => {
-      const nums = [...draw.numbers].sort((a, b) => a - b);
-      for (let i = 0; i < nums.length - 1; i++) {
-        if (nums[i + 1] - nums[i] === 1) {
-          const key = `${nums[i]}-${nums[i + 1]}`;
-          pairCount[key] = (pairCount[key] || 0) + 1;
+  // Number range distribution
+  const rangeStats = useMemo(() => {
+    const ranges = [
+      { label: '1~10', min: 1, max: 10, count: 0 },
+      { label: '11~20', min: 11, max: 20, count: 0 },
+      { label: '21~30', min: 21, max: 30, count: 0 },
+      { label: '31~40', min: 31, max: 40, count: 0 },
+      { label: '41~45', min: 41, max: 45, count: 0 },
+    ];
+    draws.forEach((draw) => {
+      draw.numbers.forEach((n) => {
+        for (const r of ranges) {
+          if (n >= r.min && n <= r.max) {
+            r.count++;
+            break;
+          }
         }
-      }
+      });
     });
-    return Object.entries(pairCount)
-      .map(([pair, count]) => ({ pair, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+    return ranges;
   }, []);
+
+  const maxRange = useMemo(
+    () => Math.max(...rangeStats.map((r) => r.count)),
+    [rangeStats]
+  );
 
   return (
     <div className="px-4 pt-6">
-      <h1 className="text-xl font-black text-center text-gold mb-6">
+      <h1 className="text-xl font-black text-center text-gold mb-2">
         번호 통계
       </h1>
+      <p className="text-xs text-gray-400 text-center mb-6">
+        데이터 기반: 1~{totalDraws}회차
+      </p>
 
       {/* Tabs */}
-      <div className="flex gap-0 border-b border-gray-200 mb-6">
+      <div className="flex gap-0 border-b border-gray-200 mb-6 overflow-x-auto no-scrollbar">
         {[
           { key: 'freq' as const, label: '출현빈도' },
           { key: 'hot' as const, label: 'Hot/Cold' },
-          { key: 'pairs' as const, label: '연속번호' },
+          { key: 'oddeven' as const, label: '홀짝비율' },
+          { key: 'range' as const, label: '구간분포' },
         ].map((t) => (
           <button
             key={t.key}
-            className={`flex-1 py-2 text-sm ${
+            className={`flex-1 py-2 text-sm whitespace-nowrap ${
               tab === t.key ? 'tab-active' : 'tab-inactive'
             }`}
             onClick={() => setTab(t.key)}
@@ -117,38 +118,9 @@ export default function StatsPage() {
       {/* Frequency Tab */}
       {tab === 'freq' && (
         <div>
-          {/* Most / Least */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="bg-red/5 rounded-xl p-3">
-              <p className="text-xs font-bold text-red mb-2">최다 출현</p>
-              <div className="flex flex-wrap gap-1">
-                {mostFrequent.map((n) => (
-                  <div key={n.num} className="text-center">
-                    <LottoBall number={n.num} size="sm" />
-                    <span className="text-[10px] text-gray-400 block">
-                      {n.count}회
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="bg-blue-50 rounded-xl p-3">
-              <p className="text-xs font-bold text-blue-500 mb-2">
-                최소 출현
-              </p>
-              <div className="flex flex-wrap gap-1">
-                {leastFrequent.map((n) => (
-                  <div key={n.num} className="text-center">
-                    <LottoBall number={n.num} size="sm" />
-                    <span className="text-[10px] text-gray-400 block">
-                      {n.count}회
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
+          <p className="text-xs text-gray-400 mb-4">
+            전체 {totalDraws}회차 출현 빈도
+          </p>
           {/* Full Chart */}
           <div className="space-y-1">
             {Array.from({ length: 45 }, (_, i) => i + 1).map((num) => (
@@ -164,7 +136,7 @@ export default function StatsPage() {
                     }}
                   />
                 </div>
-                <span className="text-xs text-gray-500 w-6 text-right">
+                <span className="text-xs text-gray-500 w-10 text-right">
                   {frequency[num]}
                 </span>
               </div>
@@ -176,22 +148,29 @@ export default function StatsPage() {
       {/* Hot/Cold Tab */}
       {tab === 'hot' && (
         <div>
-          <p className="text-xs text-gray-400 mb-4">
-            최근 10회차 기준 (데이터 기반)
-          </p>
-
           <div className="mb-6">
             <h3 className="text-sm font-bold text-red mb-3 flex items-center gap-1">
-              🔥 Hot 번호
+              🔥 Hot 번호 (최다 출현 Top 10)
             </h3>
-            <div className="flex gap-2 flex-wrap">
-              {hot.map((n) => (
+            <div className="space-y-2">
+              {hotNumbers.map((n, i) => (
                 <div
                   key={n.num}
-                  className="flex items-center gap-1.5 bg-red/5 px-3 py-1.5 rounded-full"
+                  className="flex items-center gap-3 bg-red/5 rounded-xl px-4 py-2"
                 >
+                  <span className="text-sm font-bold text-gray-300 w-5">
+                    {i + 1}
+                  </span>
                   <LottoBall number={n.num} size="sm" />
-                  <span className="text-xs font-bold text-red">
+                  <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
+                    <div
+                      className="h-full bg-red rounded-full"
+                      style={{
+                        width: `${maxFreq > 0 ? (n.count / maxFreq) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-red w-12 text-right">
                     {n.count}회
                   </span>
                 </div>
@@ -201,63 +180,117 @@ export default function StatsPage() {
 
           <div>
             <h3 className="text-sm font-bold text-blue-500 mb-3 flex items-center gap-1">
-              🧊 Cold 번호
+              🧊 Cold 번호 (최소 출현 Top 10)
             </h3>
-            {cold.length > 0 ? (
-              <div className="flex gap-2 flex-wrap">
-                {cold.map((n) => (
-                  <div
-                    key={n.num}
-                    className="bg-blue-50 px-3 py-1.5 rounded-full"
-                  >
-                    <LottoBall number={n.num} size="sm" />
+            <div className="space-y-2">
+              {coldNumbers.map((n, i) => (
+                <div
+                  key={n.num}
+                  className="flex items-center gap-3 bg-blue-50 rounded-xl px-4 py-2"
+                >
+                  <span className="text-sm font-bold text-gray-300 w-5">
+                    {i + 1}
+                  </span>
+                  <LottoBall number={n.num} size="sm" />
+                  <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
+                    <div
+                      className="h-full bg-blue-400 rounded-full"
+                      style={{
+                        width: `${maxFreq > 0 ? (n.count / maxFreq) * 100 : 0}%`,
+                      }}
+                    />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400">
-                모든 번호가 최근 10회 내에 출현했습니다
-              </p>
-            )}
+                  <span className="text-xs font-bold text-blue-500 w-12 text-right">
+                    {n.count}회
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Consecutive Pairs Tab */}
-      {tab === 'pairs' && (
+      {/* Odd/Even Tab */}
+      {tab === 'oddeven' && (
         <div>
           <p className="text-xs text-gray-400 mb-4">
-            최근 20회차에서 나란히 나온 연속 번호 쌍
+            전체 {totalDraws}회차 기준 홀수/짝수 비율
           </p>
 
-          {pairs.length > 0 ? (
-            <div className="space-y-2">
-              {pairs.map((p, i) => {
-                const [a, b] = p.pair.split('-').map(Number);
-                return (
-                  <div
-                    key={p.pair}
-                    className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3"
-                  >
-                    <span className="text-sm font-bold text-gray-300 w-5">
-                      {i + 1}
-                    </span>
-                    <div className="flex gap-1">
-                      <LottoBall number={a} size="sm" />
-                      <LottoBall number={b} size="sm" />
-                    </div>
-                    <span className="text-xs text-gold font-bold ml-auto">
-                      {p.count}회
-                    </span>
-                  </div>
-                );
-              })}
+          <div className="bg-gray-50 rounded-2xl p-5 mb-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="text-center flex-1">
+                <p className="text-xs text-gray-400 mb-1">홀수</p>
+                <p className="text-2xl font-black text-red">{oddEvenStats.odd.toLocaleString()}</p>
+                <p className="text-sm font-bold text-red">
+                  {((oddEvenStats.odd / (oddEvenStats.odd + oddEvenStats.even)) * 100).toFixed(1)}%
+                </p>
+              </div>
+              <div className="text-gray-300 text-lg font-bold">vs</div>
+              <div className="text-center flex-1">
+                <p className="text-xs text-gray-400 mb-1">짝수</p>
+                <p className="text-2xl font-black text-blue-500">{oddEvenStats.even.toLocaleString()}</p>
+                <p className="text-sm font-bold text-blue-500">
+                  {((oddEvenStats.even / (oddEvenStats.odd + oddEvenStats.even)) * 100).toFixed(1)}%
+                </p>
+              </div>
             </div>
-          ) : (
-            <p className="text-center text-gray-400 text-sm py-8">
-              연속 번호 쌍이 없습니다
-            </p>
-          )}
+
+            {/* Visual bar */}
+            <div className="h-6 rounded-full overflow-hidden flex">
+              <div
+                className="h-full bg-red"
+                style={{
+                  width: `${(oddEvenStats.odd / (oddEvenStats.odd + oddEvenStats.even)) * 100}%`,
+                }}
+              />
+              <div
+                className="h-full bg-blue-500"
+                style={{
+                  width: `${(oddEvenStats.even / (oddEvenStats.odd + oddEvenStats.even)) * 100}%`,
+                }}
+              />
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-xs text-red">홀수</span>
+              <span className="text-xs text-blue-500">짝수</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-400 text-center">
+            총 {(oddEvenStats.odd + oddEvenStats.even).toLocaleString()}개 번호 분석
+          </p>
+        </div>
+      )}
+
+      {/* Range Distribution Tab */}
+      {tab === 'range' && (
+        <div>
+          <p className="text-xs text-gray-400 mb-4">
+            전체 {totalDraws}회차 번호 구간별 출현 분포
+          </p>
+
+          <div className="space-y-3">
+            {rangeStats.map((r) => (
+              <div key={r.label} className="bg-gray-50 rounded-xl p-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-bold text-gray-700">{r.label}</span>
+                  <span className="text-sm font-bold text-gold">{r.count.toLocaleString()}회</span>
+                </div>
+                <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gold rounded-full transition-all"
+                    style={{
+                      width: `${maxRange > 0 ? (r.count / maxRange) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  비율: {((r.count / (totalDraws * 6)) * 100).toFixed(1)}%
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
