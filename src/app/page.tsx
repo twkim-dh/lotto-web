@@ -59,6 +59,7 @@ export default function Home() {
 
   // Share feedback
   const [shareMsg, setShareMsg] = useState('');
+  const [copyMsg, setCopyMsg] = useState('');
 
   // Latest draw from static data
   const latestDraw = useMemo(() => {
@@ -484,6 +485,66 @@ export default function Home() {
               >
                 이미지 저장
               </button>
+            </div>
+
+            {/* 구매 연결 섹션 */}
+            <div className="mt-4 bg-green-50 border border-green-200 rounded-2xl p-4">
+              <h4 className="text-sm font-bold text-green-800 mb-3">🛒 이 번호로 구매하려면</h4>
+              <div className="space-y-2 text-xs text-green-700 mb-3">
+                <p>① 아래 번호를 복사하세요</p>
+                <p>② 동행복권 앱/사이트에서 "수동 선택"</p>
+                <p>③ 복사한 번호를 직접 입력</p>
+              </div>
+
+              {/* 번호 복사 */}
+              <button
+                onClick={() => {
+                  const text = results.map((set, i) =>
+                    `${String.fromCharCode(65 + i)}세트: ${set.join(', ')}`
+                  ).join('\n');
+                  navigator.clipboard.writeText(text).then(() => {
+                    setCopyMsg('번호 복사 완료! ✅');
+                    setTimeout(() => setCopyMsg(''), 2000);
+                  }).catch(() => {
+                    prompt('번호를 복사하세요:', results.map(s => s.join(', ')).join(' / '));
+                  });
+                }}
+                className="w-full py-2.5 bg-white border border-green-300 text-green-800 rounded-xl text-sm font-bold hover:bg-green-100 transition-colors mb-2"
+              >
+                {copyMsg || '📋 번호 복사하기'}
+              </button>
+
+              {/* 동행복권 연결 */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+                    if (isMobile) {
+                      const isIOS = /iPhone|iPad/i.test(navigator.userAgent);
+                      const storeUrl = isIOS
+                        ? 'https://apps.apple.com/kr/app/%EB%8F%99%ED%96%89%EB%B3%B5%EA%B6%8C/id1354740879'
+                        : 'https://play.google.com/store/apps/details?id=com.dhlottery.dlotto';
+                      window.location.href = storeUrl;
+                    } else {
+                      window.open('https://dhlottery.co.kr/', '_blank');
+                    }
+                  }}
+                  className="flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 transition-colors"
+                >
+                  🛒 동행복권 열기
+                </button>
+                <button
+                  onClick={() => window.open('https://dhlottery.co.kr/', '_blank')}
+                  className="flex-1 py-2.5 bg-white border border-green-300 text-green-700 rounded-xl text-sm font-bold hover:bg-green-50 transition-colors"
+                >
+                  🌐 웹사이트
+                </button>
+              </div>
+
+              <p className="text-[10px] text-gray-400 mt-3 text-center leading-relaxed">
+                ⚠️ 본 서비스는 번호 생성만 제공하며 구매 대행을 하지 않습니다.
+                <br />구매는 동행복권 공식 앱/사이트에서 직접 해주세요.
+              </p>
             </div>
           </motion.div>
         )}
