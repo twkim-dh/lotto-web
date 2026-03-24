@@ -80,44 +80,58 @@ export function generateOddEven(
   return sets;
 }
 
-// Dream interpretation keyword -> number mapping
-const dreamMap: Record<string, number[]> = {
-  돼지: [1, 11, 21, 31, 41],
-  돈: [2, 12, 22, 32, 42],
-  물: [3, 13, 23, 33, 43],
-  불: [4, 14, 24, 34, 44],
-  나무: [5, 15, 25, 35, 45],
-  산: [6, 16, 26, 36, 40],
-  바다: [7, 17, 27, 37, 39],
-  하늘: [8, 18, 28, 38],
-  꽃: [9, 19, 29, 39],
-  새: [10, 20, 30, 40],
-  뱀: [3, 6, 13, 26, 33],
-  호랑이: [7, 17, 27, 37, 44],
-  용: [1, 8, 18, 28, 38],
-  거북이: [5, 15, 25, 35, 42],
-  말: [4, 14, 24, 34, 41],
-  소: [2, 12, 22, 32, 43],
-  개: [9, 19, 29, 39, 45],
-  고양이: [10, 20, 30, 40, 44],
-  물고기: [3, 7, 17, 27, 37],
-  나비: [6, 16, 26, 36, 43],
-  별: [8, 18, 28, 38, 45],
-  달: [1, 11, 21, 31, 41],
-  태양: [4, 14, 24, 34, 44],
-  비: [3, 13, 23, 33, 43],
-  눈: [5, 15, 25, 35, 42],
-  바람: [7, 17, 27, 37, 39],
-  집: [2, 12, 22, 32, 40],
-  차: [9, 19, 29, 39, 44],
-  사람: [1, 10, 20, 30, 45],
-  아기: [6, 16, 26, 36, 41],
-  결혼: [8, 18, 28, 38, 42],
-  시험: [4, 14, 24, 34, 43],
-  죽음: [5, 15, 25, 35, 40],
-  음식: [2, 12, 22, 32, 44],
-  과일: [3, 13, 23, 33, 45],
-};
+// Dream interpretation data with emoji, numbers, and meaning
+export interface DreamEntry {
+  keyword: string;
+  emoji: string;
+  numbers: number[];
+  meaning: string;
+}
+
+export const dreamData: DreamEntry[] = [
+  { keyword: '돼지', emoji: '🐷', numbers: [3, 13, 33, 43], meaning: '재물운' },
+  { keyword: '돈', emoji: '💰', numbers: [8, 18, 28, 38], meaning: '금전운' },
+  { keyword: '물', emoji: '💧', numbers: [4, 14, 24, 44], meaning: '변화' },
+  { keyword: '불', emoji: '🔥', numbers: [7, 17, 27, 37], meaning: '열정' },
+  { keyword: '용', emoji: '🐲', numbers: [5, 15, 25, 35], meaning: '큰행운' },
+  { keyword: '호랑이', emoji: '🐯', numbers: [6, 16, 26, 36], meaning: '권력' },
+  { keyword: '뱀', emoji: '🐍', numbers: [2, 12, 22, 42], meaning: '지혜' },
+  { keyword: '죽은사람', emoji: '👻', numbers: [9, 19, 29, 39], meaning: '변화' },
+  { keyword: '하늘', emoji: '☁️', numbers: [1, 11, 21, 31], meaning: '희망' },
+  { keyword: '비행기', emoji: '✈️', numbers: [1, 11, 31, 41], meaning: '상승' },
+  { keyword: '바다', emoji: '🌊', numbers: [10, 20, 30, 40], meaning: '기회' },
+  { keyword: '물고기', emoji: '🐟', numbers: [10, 20, 30, 40], meaning: '풍요' },
+  { keyword: '나무', emoji: '🌳', numbers: [23, 32, 41, 45], meaning: '성장' },
+  { keyword: '꽃', emoji: '🌸', numbers: [23, 32, 41, 45], meaning: '행복' },
+  { keyword: '시험', emoji: '📝', numbers: [7, 17, 27, 37], meaning: '합격' },
+  { keyword: '결혼', emoji: '💒', numbers: [2, 12, 22, 32], meaning: '새시작' },
+  { keyword: '연애', emoji: '❤️', numbers: [2, 12, 22, 32], meaning: '사랑' },
+  { keyword: '아기', emoji: '👶', numbers: [1, 11, 21, 41], meaning: '탄생' },
+  { keyword: '자동차', emoji: '🚗', numbers: [4, 14, 34, 44], meaning: '진전' },
+  { keyword: '집', emoji: '🏠', numbers: [8, 18, 28, 38], meaning: '안정' },
+  { keyword: '이사', emoji: '📦', numbers: [3, 13, 33, 43], meaning: '변화' },
+  { keyword: '개', emoji: '🐕', numbers: [6, 16, 26, 36], meaning: '충성' },
+  { keyword: '고양이', emoji: '🐈', numbers: [5, 15, 25, 35], meaning: '직감' },
+  { keyword: '소', emoji: '🐄', numbers: [3, 13, 33, 43], meaning: '근면' },
+  { keyword: '말', emoji: '🐎', numbers: [5, 15, 25, 35], meaning: '속도' },
+  { keyword: '새', emoji: '🐦', numbers: [1, 11, 21, 31], meaning: '자유' },
+  { keyword: '산', emoji: '⛰️', numbers: [9, 19, 29, 39], meaning: '도전' },
+  { keyword: '비', emoji: '🌧️', numbers: [4, 14, 24, 44], meaning: '정화' },
+  { keyword: '눈', emoji: '❄️', numbers: [10, 20, 30, 40], meaning: '순수' },
+  { keyword: '태양', emoji: '☀️', numbers: [1, 11, 21, 31], meaning: '성공' },
+  { keyword: '달', emoji: '🌙', numbers: [9, 19, 29, 39], meaning: '직감' },
+  { keyword: '별', emoji: '⭐', numbers: [7, 17, 27, 37], meaning: '행운' },
+  { keyword: '도둑', emoji: '🦹', numbers: [8, 18, 28, 38], meaning: '의외재물' },
+  { keyword: '왕', emoji: '👑', numbers: [5, 15, 25, 45], meaning: '권력' },
+  { keyword: '금', emoji: '🥇', numbers: [8, 18, 28, 38], meaning: '가치' },
+  { keyword: '피', emoji: '🩸', numbers: [9, 19, 29, 39], meaning: '생명력' },
+];
+
+// Build dreamMap from dreamData for backward compatibility
+const dreamMap: Record<string, number[]> = {};
+for (const entry of dreamData) {
+  dreamMap[entry.keyword] = entry.numbers;
+}
 
 export function generateDream(keyword: string, setCount: number): number[][] {
   const trimmed = keyword.trim();
@@ -167,4 +181,63 @@ export function generateDream(keyword: string, setCount: number): number[][] {
     sets.push(picked.sort((a, b) => a - b));
   }
   return sets;
+}
+
+export interface DreamResult {
+  numbers: number[];
+  dreamNumbers: number[]; // which numbers came from dream data
+}
+
+export function generateDreamWithSource(
+  keyword: string,
+  setCount: number
+): DreamResult[] {
+  const trimmed = keyword.trim();
+  let seedNumbers: number[] = [];
+
+  for (const [key, nums] of Object.entries(dreamMap)) {
+    if (trimmed.includes(key)) {
+      seedNumbers = [...seedNumbers, ...nums];
+    }
+  }
+
+  if (seedNumbers.length === 0) {
+    for (let i = 0; i < trimmed.length; i++) {
+      const code = trimmed.charCodeAt(i);
+      seedNumbers.push((code % 45) + 1);
+    }
+  }
+
+  seedNumbers = [...new Set(seedNumbers)];
+
+  const results: DreamResult[] = [];
+  for (let s = 0; s < setCount; s++) {
+    const picked: number[] = [];
+    const dreamPicked: number[] = [];
+    const pool = [...seedNumbers];
+
+    const fromSeed = Math.min(
+      Math.floor(Math.random() * 2) + 2,
+      pool.length,
+      3
+    );
+    for (let i = 0; i < fromSeed; i++) {
+      const idx = Math.floor(Math.random() * pool.length);
+      picked.push(pool[idx]);
+      dreamPicked.push(pool[idx]);
+      pool.splice(idx, 1);
+    }
+
+    if (picked.length < 6) {
+      const remaining = getRandomNumbers(6 - picked.length, picked);
+      picked.push(...remaining);
+    }
+
+    const sorted = picked.sort((a, b) => a - b);
+    results.push({
+      numbers: sorted,
+      dreamNumbers: dreamPicked,
+    });
+  }
+  return results;
 }
