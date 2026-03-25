@@ -6,8 +6,8 @@ import { usePathname } from 'next/navigation';
 const navItems = [
   { href: '/', label: '생성', icon: '🎱' },
   { href: '/simulate', label: '시뮬', icon: '🎰' },
+  { href: '/verify', label: '검증', icon: '🔬' },
   { href: '/draw', label: '당첨', icon: '🏆' },
-  { href: '/check', label: '확인', icon: '🔍' },
   { href: '/stats', label: '통계', icon: '📊' },
 ];
 
