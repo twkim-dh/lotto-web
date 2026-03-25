@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import NumberSet from '@/components/NumberSet';
 import LottoBall from '@/components/LottoBall';
+import FortuneCard from '@/components/FortuneCard';
 import {
   generateRandom,
   generateWithFixed,
@@ -253,6 +254,19 @@ export default function Home() {
           행운의 번호를 뽑아보세요
         </p>
       </div>
+
+      {/* Fortune Card */}
+      <FortuneCard
+        onGenerateWithLucky={(luckyNums) => {
+          setMode('fixed');
+          setFixedNumbers(luckyNums);
+          // Auto generate
+          const generated = generateWithFixed(luckyNums, setCount);
+          setResults(generated);
+          setIsGenerated(true);
+          setAnimationKey(Date.now());
+        }}
+      />
 
       {/* Mode Tabs */}
       <div className="flex overflow-x-auto gap-0 border-b border-gray-200 mb-4 no-scrollbar">
