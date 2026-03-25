@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navItems = [
-  { href: '/', label: '번호생성', icon: '🎱' },
-  { href: '/draw', label: '당첨번호', icon: '🏆' },
-  { href: '/check', label: '당첨확인', icon: '🔍' },
+  { href: '/', label: '생성', icon: '🎱' },
+  { href: '/simulate', label: '시뮬', icon: '🎰' },
+  { href: '/draw', label: '당첨', icon: '🏆' },
+  { href: '/check', label: '확인', icon: '🔍' },
   { href: '/stats', label: '통계', icon: '📊' },
 ];
 
